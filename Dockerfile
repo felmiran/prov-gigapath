@@ -9,7 +9,8 @@ COPY environment.yaml /app/
 
 
 # add huggingface token as env
-ENV HF_TOKEN=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
+ARG HF_TOKEN
+ENV HF_TOKEN=$HF_TOKEN
 
 # Install the conda environment specified in environment.yaml
 RUN conda env create -f environment.yaml
@@ -39,6 +40,13 @@ ENV PATH /opt/conda/envs/gigapath/bin:$PATH
 # install packages in the pkgs directory
 COPY ./pkgs/ ./pkgs/
 RUN for d in ./pkgs/*/ ; do echo "Installing package" "$d" ; pip install "$d"; done
+
+RUN mkdir -p /.cache
+RUN chown -R ${UID}:${GID} /.cache
+
+RUN mkdir -p /.local
+RUN chown -R ${UID}:${GID} /.local
+
 
 # Ensure the environment is activated when the container starts
 CMD ["bash", "-c", "source activate gigapath && exec bash"]

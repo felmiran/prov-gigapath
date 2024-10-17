@@ -1,3 +1,25 @@
+Personal note:
+
+Build Dockerfile: 
+
+```
+$ export HF_TOKEN=xxxxxxxxxxxxxxxx # required to run prov_gigapath
+$ docker build -f Dockerfile --tag prov_gigapath .
+```
+Run Dockerfile:
+```
+docker run --network="host"  -it --rm --user $(id -u) --gpus all -v /home/tiga:/main_dir/felipe --entrypoint /bin/bash prov_gigapath:latest
+```
+
+I got an error with timm, caused by version 1.0.10. May be required to run  `pip install timm==1.0.9` 
+
+```
+$ cd /path/to/prov-gigapath/tests
+$ python encode_wsi_tiles_v2.py
+```
+
+
+
 # Prov-GigaPath
 
 ## A whole-slide foundation model for digital pathology from real-world data
