@@ -1,0 +1,10 @@
+{
+  "resolution": 20,
+  "batch_size": 50,
+  "tile_size": 256,
+  "wsi_list_path": "/main_dir/felipe/projects/CLAM/datasets/features/wsi_list.csv",
+  "coords_dir": "/main_dir/felipe/projects/CLAM/datasets/features/h5_files",
+  "wsi_dir": "/main_dir/felipe/projects/CLAM/datasets/features/wsis",
+  "wsi_path_ext": ".tiff",
+  "save_path": "features"
+}

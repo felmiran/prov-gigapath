@@ -9,6 +9,11 @@ __pycache__/
 test/
 outputs/
 cache/
+pkgs/
+
+
+*.h5
+
 
 # Distribution / packaging
 .Python
