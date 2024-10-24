@@ -10,8 +10,42 @@ from torch.utils.data import Dataset, DataLoader
 import h5py
 import timm
 from cp_toolbox.image_processing.slide import Wsi
+from cp_toolbox.utils.utils import list_file_paths
 from gigapath.pipeline import load_tile_encoder_transforms
 import torch.multiprocessing as mp
+import math
+
+
+def split_dataframe(df, n_splits):
+    """
+    Splits a DataFrame into n smaller DataFrames.
+
+    Parameters:
+    ----------
+    df : pandas.DataFrame
+        The DataFrame to split.
+    n_splits : int
+        The number of splits to create.
+
+    Returns:
+    -------
+    list
+        A list containing the split DataFrames.
+    """
+    # Calculate the number of columns per split
+    num_rows = df.shape[0]
+    rows_per_split = num_rows // n_splits
+
+    # Create a list to hold the resulting DataFrames
+    dfs = []
+
+    for i in range(n_splits):
+        start_row = i * rows_per_split
+        # For the last split, ensure it includes all remaining columns
+        end_row = start_row + rows_per_split if i < n_splits - 1 else num_rows
+        dfs.append(df.iloc[start_row:end_row, :])
+
+    return dfs
 
 
 class TileGeneratorDataset(Dataset):
@@ -39,7 +73,7 @@ class TileGeneratorDataset(Dataset):
             img = self.transform(img)
         return {
             'img': torch.from_numpy(np.array(img)),
-            'coords': torch.from_numpy(np.array([x, y])).float() / (2**self.level)
+            'coords': torch.from_numpy(np.array([x, y])).float() / (2 ** self.level)
         }
 
 
@@ -63,7 +97,7 @@ def encode_wsi_tiles(resolution, batch_size, tile_size, coords_path, wsi_path, s
     # Load coords from the HDF5 file
     with h5py.File(coords_path, 'r') as f:
         coords = f['coords'][:]
-    
+
     tile_dl = DataLoader(
         TileGeneratorDataset(
             transform=load_tile_encoder_transforms(),
@@ -74,12 +108,16 @@ def encode_wsi_tiles(resolution, batch_size, tile_size, coords_path, wsi_path, s
         ),
         batch_size=batch_size,
         shuffle=False,
-        # num_workers=0  # You may reduce workers to avoid overloading system
+        pin_memory=True,
+        prefetch_factor=4,
+        num_workers=4
     )
     output = run_inference_with_tile_encoder(tile_encoder=tile_encoder, tile_dl=tile_dl, gpu_id=gpu_id)
 
     Path(save_path).mkdir(exist_ok=True, parents=True)
-    with h5py.File(os.path.join(save_path, f'{Path(wsi_path).stem}.h5'), 'w') as f:
+
+    # with h5py.File(os.path.join(save_path, f'{Path(wsi_path).stem}_gpu_{gpu_id}.h5'), 'w') as f:
+    with h5py.File(os.path.join(save_path, f'{Path(wsi_path).stem}_gpu_{gpu_id}.h5'), 'w') as f:
         f.create_dataset("coords", data=output["coords"])
         f.create_dataset("features", data=output["features"])
 
@@ -99,12 +137,15 @@ def run_inference_on_all_gpus(gpu_id, conf, tile_encoder):
     # tile_encoder = load_tile_encoder()
     tile_encoder = tile_encoder.cuda(gpu_id)
 
-    df = pd.read_csv(wsi_list_path)
-    wsi_names = df.slide_id
+    # df = pd.read_csv(wsi_list_path)
+    df = conf["wsi_list_df"]
+    # wsi_names = df.slide_id
 
-    for wsi_n in wsi_names:
+    for i, row in df.iterrows():
+        wsi_n = row.slide_id
+        old_wsi_n = row.old_id
         wsi_path = os.path.join(wsi_dir, wsi_n + wsi_path_ext)
-        coords_path = os.path.join(coords_dir, wsi_n + ".h5")
+        coords_path = os.path.join(coords_dir, old_wsi_n + ".h5")
 
         encode_wsi_tiles(
             resolution=resolution,
@@ -118,6 +159,10 @@ def run_inference_on_all_gpus(gpu_id, conf, tile_encoder):
         )
 
 
+def spawn_function(gpu_id, args_list):
+    run_inference_on_all_gpus(gpu_id, *args_list[gpu_id])
+
+
 if __name__ == "__main__":
     mp.set_start_method('spawn')  # Use 'spawn' start method to avoid fork issues
     parser = argparse.ArgumentParser(description="parser function to encode WSI tiles")
@@ -129,5 +174,21 @@ if __name__ == "__main__":
 
     tile_encoder = load_tile_encoder()
     world_size = torch.cuda.device_count()  # Get the number of available GPUs
-    mp.spawn(run_inference_on_all_gpus, args=(conf,tile_encoder,), nprocs=world_size, join=True)
+    print(f"Number of available GPUs: {world_size}")
 
+    ### get the list of wsis to process.
+    df = pd.read_csv(conf["wsi_list_path"])
+    df = df[df.label.isin(["positive", "negative"])]
+    processed = [Path(i).stem[:-6] for i in list_file_paths(conf["save_path"], [".h5"])]
+    print(f"already processed: {df[df.slide_id.isin(processed)].shape}")
+    df = df[~df.slide_id.isin(processed)]
+    print(f"pending to process: {df.shape}")
+
+    splits = split_dataframe(df, world_size)
+    confs = [conf.copy() for i in range(world_size)]
+    for i, c in enumerate(confs):
+        c["wsi_list_df"] = splits[i]
+        print(splits[i].shape)
+
+    args_list = [(confs[i], tile_encoder) for i in range(world_size)]
+    mp.spawn(spawn_function, args=(args_list,), nprocs=world_size, join=True)

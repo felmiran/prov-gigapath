@@ -1,15 +1,29 @@
 Personal note:
 
-Build Dockerfile: 
+### Build Dockerfile: 
 
 ```
-$ export HF_TOKEN=xxxxxxxxxxxxxxxx # required to run prov_gigapath
 $ docker build -f Dockerfile --tag prov_gigapath .
 ```
-Run Dockerfile:
+### Run Dockerfile umg-tiga:
+
+required hugging face read token
+
 ```
-docker run --network="host"  -it --rm --user $(id -u) --gpus all -v /home/tiga:/main_dir/felipe --entrypoint /bin/bash prov_gigapath:latest
+docker run --network="host"  -it --rm --user $(id -u) --gpus all -v /home/tiga:/main_dir/felipe \
+                             --env HF_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+                             --entrypoint /bin/bash prov_gigapath:latest
 ```
+### Run Dockerfile local:
+
+required hugging face read token
+
+```
+docker run --network="host"  -it --rm --user $(id -u) --gpus all -v /home/schroederubuntu:/main_dir/felipe \
+                             --env HF_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+                             --entrypoint /bin/bash prov_gigapath:latest
+```
+
 
 I got an error with timm, caused by version 1.0.10. May be required to run  `pip install timm==1.0.9` 
 
@@ -18,6 +32,11 @@ $ cd /path/to/prov-gigapath/tests
 $ python encode_wsi_tiles_v2.py
 ```
 
+
+To run docker on TIGA:
+```
+docker run --network="host"  -it --shm-size=8g  --rm --user $(id -u) --gpus all -v /home/tiga:/main_dir/felipe -v /mnt/data:/app/mnt_data --entrypoint /bin/bash prov_gigapath:latest
+```
 
 
 # Prov-GigaPath

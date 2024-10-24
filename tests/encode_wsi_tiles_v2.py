@@ -89,7 +89,9 @@ def encode_wsi_tiles(resolution, batch_size, tile_size, coords_path, wsi_path, s
             resolution=resolution
         ),
         batch_size=batch_size,
-        shuffle=False
+        shuffle=False,
+        pin_memory=True,
+        prefetch_factor=4
     )
     output = run_inference_with_tile_encoder(tile_encoder=tile_encoder, tile_dl=tile_dl)
     output["coords"] = output["coords"]  / (2 ** level)  # output coords at selected resolution

@@ -1,8 +1,8 @@
 # Use an official base image with Conda, such as ContinuumIO miniconda image
 FROM continuumio/miniconda3
 
-ARG UID=1000
-ARG GID=1000
+ARG UID=731514
+ARG GID=6270
 
 # Set a working directory inside the container
 WORKDIR /app

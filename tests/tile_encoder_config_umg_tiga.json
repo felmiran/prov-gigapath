@@ -1,0 +1,10 @@
+{
+  "resolution": 20,
+  "batch_size": 50,
+  "tile_size": 256,
+  "wsi_list_path": "/app/mnt_data/felipe/prov_gigapath/process_data_for_training.csv",
+  "coords_dir": "/app/mnt_data/felipe/CLAM/FEATURES_DIRECTORY/cancerscout_colon/tumor_vs_normal_resnet_features/h5_files",
+  "wsi_dir": "/app/mnt_data/transfer/CancerScout_HE",
+  "wsi_path_ext": ".tiff",
+  "save_path": "/app/mnt_data/felipe/prov_gigapath/tile_features"
+}
