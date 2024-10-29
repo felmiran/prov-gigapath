@@ -1,6 +1,8 @@
 import os
+import sys
 import argparse
 import json
+import traceback
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
@@ -15,6 +17,8 @@ from gigapath.pipeline import load_tile_encoder_transforms
 import torch.multiprocessing as mp
 import math
 
+import mp_logging
+import logging
 
 def split_dataframe(df, n_splits):
     """
@@ -122,7 +126,8 @@ def encode_wsi_tiles(resolution, batch_size, tile_size, coords_path, wsi_path, s
         f.create_dataset("features", data=output["features"])
 
 
-def run_inference_on_all_gpus(gpu_id, conf, tile_encoder):
+def run_inference_on_all_gpus(gpu_id, conf, tile_encoder, log_queue):
+    mp_logging.setup_worker_logging(gpu_id, log_queue)
     torch.cuda.set_device(gpu_id)
 
     resolution = conf["resolution"]
@@ -146,17 +151,22 @@ def run_inference_on_all_gpus(gpu_id, conf, tile_encoder):
         old_wsi_n = row.old_id
         wsi_path = os.path.join(wsi_dir, wsi_n + wsi_path_ext)
         coords_path = os.path.join(coords_dir, old_wsi_n + ".h5")
-
-        encode_wsi_tiles(
-            resolution=resolution,
-            batch_size=batch_size,
-            tile_size=tile_size,
-            coords_path=coords_path,
-            wsi_path=wsi_path,
-            save_path=save_path,
-            tile_encoder=tile_encoder,
-            gpu_id=gpu_id
-        )
+        try:
+            encode_wsi_tiles(
+                resolution=resolution,
+                batch_size=batch_size,
+                tile_size=tile_size,
+                coords_path=coords_path,
+                wsi_path=wsi_path,
+                save_path=save_path,
+                tile_encoder=tile_encoder,
+                gpu_id=gpu_id
+            )
+        except Exception as e:
+            logging.error(f"Error processing slide {wsi_path}")
+            exc_type, exc_value, exc_tb = sys.exc_info()  # Capture the exception details
+            logging.error("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
+            raise
 
 
 def spawn_function(gpu_id, args_list):
@@ -190,5 +200,6 @@ if __name__ == "__main__":
         c["wsi_list_df"] = splits[i]
         print(splits[i].shape)
 
-    args_list = [(confs[i], tile_encoder) for i in range(world_size)]
+    log_queue = mp_logging.setup_primary_logging("out.log", "error.log")
+    args_list = [(confs[i], tile_encoder, log_queue) for i in range(world_size)]
     mp.spawn(spawn_function, args=(args_list,), nprocs=world_size, join=True)

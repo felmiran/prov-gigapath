@@ -29,7 +29,7 @@ I got an error with timm, caused by version 1.0.10. May be required to run  `pip
 
 ```
 $ cd /path/to/prov-gigapath/tests
-$ python encode_wsi_tiles_v2.py
+$ python encode_wsi_tiles_v2_multiprocessing.py
 ```
 
 
