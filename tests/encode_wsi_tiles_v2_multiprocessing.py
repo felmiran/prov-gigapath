@@ -69,16 +69,30 @@ class TileGeneratorDataset(Dataset):
     def __len__(self):
         return len(self.coords)
 
+    # def __getitem__(self, idx):
+    #     self._load_wsi()  # Load Wsi object in the process
+    #     x, y = self.coords[idx]
+    #     img = self.wsi.read_region((x, y), self.level, (self.tile_size, self.tile_size)).convert("RGB")
+    #     if self.transform:
+    #         img = self.transform(img)
+    #     return {
+    #         'img': torch.from_numpy(np.array(img)),
+    #         'coords': torch.from_numpy(np.array([x, y])).float() / (2 ** self.level)
+    #     }
     def __getitem__(self, idx):
         self._load_wsi()  # Load Wsi object in the process
         x, y = self.coords[idx]
-        img = self.wsi.read_region((x, y), self.level, (self.tile_size, self.tile_size)).convert("RGB")
-        if self.transform:
-            img = self.transform(img)
-        return {
-            'img': torch.from_numpy(np.array(img)),
-            'coords': torch.from_numpy(np.array([x, y])).float() / (2 ** self.level)
-        }
+        try:
+            img = self.wsi.read_region((x, y), self.level, (self.tile_size, self.tile_size)).convert("RGB")
+            if self.transform:
+                img = self.transform(img)
+            return {
+                'img': torch.from_numpy(np.array(img)),
+                'coords': torch.from_numpy(np.array([x, y])).float() / (2 ** self.level)
+            }
+        except Exception as e:
+            logging.error(f"Error reading region at WSI: {self.wsi_path}, Coordinates: ({x}, {y})")
+            raise
 
 
 @torch.no_grad()
@@ -176,7 +190,7 @@ def spawn_function(gpu_id, args_list):
 if __name__ == "__main__":
     mp.set_start_method('spawn')  # Use 'spawn' start method to avoid fork issues
     parser = argparse.ArgumentParser(description="parser function to encode WSI tiles")
-    parser.add_argument("--conf", type=str, help="path to config file", default="tile_encoder_config.json")
+    parser.add_argument("--conf", type=str, help="path to config file", default="tile_encoder_config_umg_tiga.json")
     args = parser.parse_args()
 
     with open(args.conf, "r") as f:
