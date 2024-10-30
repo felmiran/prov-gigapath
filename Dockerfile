@@ -11,8 +11,8 @@ WORKDIR /app
 COPY environment.yaml /app/
 
 # add huggingface token as env
-ARG HF_TOKEN
-ENV HF_TOKEN=$HF_TOKEN
+#ARG HF_TOKEN
+#ENV HF_TOKEN=$HF_TOKEN
 
 # Install the conda environment specified in environment.yaml
 RUN conda env create -f environment.yaml

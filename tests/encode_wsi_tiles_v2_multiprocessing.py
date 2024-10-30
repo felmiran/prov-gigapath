@@ -92,6 +92,8 @@ class TileGeneratorDataset(Dataset):
             }
         except Exception as e:
             logging.error(f"Error reading region at WSI: {self.wsi_path}, Coordinates: ({x}, {y})")
+            exc_type, exc_value, exc_tb = sys.exc_info()  # Capture the exception details
+            logging.error("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
             raise
 
 
@@ -180,7 +182,7 @@ def run_inference_on_all_gpus(gpu_id, conf, tile_encoder, log_queue):
             logging.error(f"Error processing slide {wsi_path}")
             exc_type, exc_value, exc_tb = sys.exc_info()  # Capture the exception details
             logging.error("".join(traceback.format_exception(exc_type, exc_value, exc_tb)))
-            raise
+            # raise
 
 
 def spawn_function(gpu_id, args_list):

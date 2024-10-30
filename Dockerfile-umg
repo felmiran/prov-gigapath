@@ -49,6 +49,5 @@ RUN chown -R ${UID}:${GID} /.cache
 RUN mkdir -p /.local
 RUN chown -R ${UID}:${GID} /.local
 
-
 # Ensure the environment is activated when the container starts
 CMD ["bash", "-c", "source activate gigapath && exec bash"]

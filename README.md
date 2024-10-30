@@ -36,7 +36,7 @@ $ docker build -f Dockerfile --tag prov_gigapath .
  hugging face read token required
 
 ```
-docker run --network="host"  -it --rm --user $(id -u) --gpus all \
+docker run --network="host"  -it --shm-size=8g --rm --user $(id -u) --gpus all \
                              -v /home/schroederubuntu:/main_dir/felipe \
                              --env HF_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
                              --entrypoint /bin/bash prov_gigapath:latest
@@ -50,7 +50,8 @@ $ python encode_wsi_tiles_v2_multiprocessing.py --conf "tile_encoder_config.json
 
 ## Captain's Log
 
-* I got an error with timm, caused by version 1.0.10. May be required to run  `pip install timm==1.0.9` FIXED: added to Dockerfile
+[25.10.2024] I got an error with timm, caused by version 1.0.10. May be required to run  `pip install timm==1.0.9` FIXED: added to Dockerfile
+[30.10.2024] timm version 1.0.11 released, error not showing anymore.
 
 # Prov-GigaPath
 

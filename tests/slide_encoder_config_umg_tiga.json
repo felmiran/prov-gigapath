@@ -1,0 +1,4 @@
+{
+  "tile_embedding_paths":"tile_features",
+  "save_path": "slide_features"
+}
